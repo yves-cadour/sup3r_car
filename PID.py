@@ -81,13 +81,19 @@ class PID:
         delta_error = error - self.last_error
 
         if (delta_time >= self.sample_time):
-            self.PTerm = self.Kp * error
+            # Optimisation : utiliser des variables locales pour éviter les accès répétés à self
+            kp = self.Kp
+            ki = self.Ki
+            kd = self.Kd
+            windup_guard = self.windup_guard
+
+            self.PTerm = kp * error
             self.ITerm += error * delta_time
 
-            if (self.ITerm < -self.windup_guard):
-                self.ITerm = -self.windup_guard
-            elif (self.ITerm > self.windup_guard):
-                self.ITerm = self.windup_guard
+            if (self.ITerm < -windup_guard):
+                self.ITerm = -windup_guard
+            elif (self.ITerm > windup_guard):
+                self.ITerm = windup_guard
 
             self.DTerm = 0.0
             if delta_time > 0:
@@ -96,9 +102,7 @@ class PID:
             # Remember last time and last error for next calculation
             self.last_time = self.current_time
             self.last_error = error
-            #print('----------------')
-            #print(str(self.PTerm) + ' + ' + str(self.Ki * self.ITerm) + ' + ' + str(self.Kd * self.DTerm) + ' = '+ str(self.output))
-            self.output = self.PTerm + (self.Ki * self.ITerm) + (self.Kd * self.DTerm)
+            self.output = self.PTerm + (ki * self.ITerm) + (kd * self.DTerm)
 
     def setKp(self, proportional_gain):
         """Determines how aggressively the PID reacts to the current error with setting Proportional Gain"""

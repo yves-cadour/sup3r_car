@@ -15,6 +15,7 @@ class Steering:
         self._angle = 0
         self._max_angle = 0
         self._steering_divider = 1
+        self._last_commanded_angle = 0  # Pour éviter les commandes répétées inutiles
 
     def get_angle(self):
         """Return the steering angle."""
@@ -46,9 +47,17 @@ class Steering:
         Tourne le moteur de direction à la position 'angle'. Angle positif à droite, négatif à gauche
         La valeur par défaut de la vitesse de rotation est 50.
         """
+        # Clamp l'angle
+        max_a = self._max_angle
         if angle > 0:
-            angle = min(angle, self._max_angle)
+            angle = min(angle, max_a)
         elif angle < 0:
-            angle = max(angle, - self._max_angle)
-        self._angle =  - angle
-        self._motor.on_to_position(speed, - angle)
+            angle = max(angle, -max_a)
+        
+        commanded = -angle
+        # Éviter de commander la même position plusieurs fois
+        if commanded != self._last_commanded_angle:
+            self._motor.on_to_position(speed, commanded)
+            self._last_commanded_angle = commanded
+        
+        self._angle = -angle

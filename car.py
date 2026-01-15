@@ -83,10 +83,13 @@ class Car:
     def launch(self, speed = 100, measures = False):
         pid = self.get_pid()
         cs = self.cs
+        motorization = self.get_motorization()
+        steering = self.get_steering()
         if not self.get_threshold():
             self.calibrate()
         pid.SetPoint = self.get_threshold()
-        self.get_motorization().run(speed)
+        pid.setSampleTime(0.01)  # Limiter les updates PID à 100 Hz
+        motorization.run(speed)
         if measures:
             self._plots['Kp'] = self.get_pid().Kp
             self._plots['Ki'] = self.get_pid().Ki
@@ -94,17 +97,24 @@ class Car:
             self._plots['threshold'] = self.get_threshold()
             self._plots['datas'] = []
         start = time.time()
+        loop_count = 0  # Compteur pour mesurer la fréquence
         while not self.ts.is_pressed:
-            self.get_motorization().run(speed)
+            motorization.run(speed)
             feedback = cs.reflected_light_intensity
+            loop_count += 1  # Incrémenter le compteur
             if measures:
                 now = time.time()
                 self._plots['datas'].append((now, feedback))
             pid.update(feedback)
-            self.get_steering().turn(pid.output, speed=100)
+            steering.turn(pid.output, speed=100)
+            time.sleep(0.01)  # Ajouter un petit délai pour éviter une boucle trop serrée
         elapsed_time = time.time() - start
+        # Calcul et affichage de la fréquence
+        if elapsed_time > 0:
+            frequency = loop_count / elapsed_time
+            print(f"Fréquence des appels à reflected_light_intensity : {frequency:.2f} Hz")
         #print("Durée : "+str(elapsed_time))
-        self.get_motorization().stop()
+        motorization.stop()
         with open('json_data.json', 'w') as outfile:
             json_string = json.dumps(self._plots)
             json.dump(json_string, outfile)

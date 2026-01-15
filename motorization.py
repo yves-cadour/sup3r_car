@@ -57,15 +57,23 @@ class Motorization:
         if differential:
             steering = self.get_car().get_steering()
             motor_angle = steering.get_angle()
-            wheel_angle = motor_angle/steering._steering_divider
-            compute = self.get_track_width()*tan(wheel_angle * pi / 180)/(2*self.get_wheelbase()) # voir le fichier geogebra
-            speed_left = (1 - compute)*speed
-            speed_right = (1 + compute)*speed
+            wheel_angle = motor_angle / steering._steering_divider
+            # Optimisation : précalculer les constantes et utiliser approximation pour tan si angle petit
+            track_width = self._track_width
+            wheelbase = self._wheelbase
+            x_rad = wheel_angle * 0.017453292519943295  # pi / 180
+            if abs(x_rad) < 0.1:  # Approximation pour petits angles
+                tan_approx = x_rad
+            else:
+                tan_approx = tan(x_rad)
+            compute = track_width * tan_approx / (2 * wheelbase)
+            speed_left = (1 - compute) * speed
+            speed_right = (1 + compute) * speed
             # The speed cant be more than possible
             if speed_right > 100 or speed_right < -100:
-                divider = abs(speed_right/100)
+                divider = abs(speed_right / 100)
             elif speed_left > 100 or speed_left < -100:
-                divider = abs(speed_left/100)
+                divider = abs(speed_left / 100)
         #print("left : "+str((speed_left/100)*(1040/divider)))
         #print("right : "+str((speed_right/100)*(1040/divider)))
         self.get_left_motor().on(speed=SpeedDPS((speed_left/100)*(1040/divider)), block=False) # 1050 is the max RPM for large motor
